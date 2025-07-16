@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 // State
 const selectedInputType = ref('')
+const isJudi = ref(true)
 
 // Methods
 const handleInputType = (type) => {
@@ -18,21 +19,21 @@ const handleInputType = (type) => {
       <div class="text-xl font-semibold">Pilih Jenis Input</div>
       <div class="flex font-bold text-blue-700">
         <button
-          class="p-4 rounded-l border-2 border-blue-700"
+          class="p-4 rounded-l border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'text' ? 'bg-blue-700 text-white' : 'bg-white'"
           @click="handleInputType('text')"
         >
           Teks
         </button>
         <button
-          class="p-4 border-t-2 border-b-2 border-blue-700"
+          class="p-4 border-t-2 border-b-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'image' ? 'bg-blue-700 text-white' : 'bg-white'"
           @click="handleInputType('image')"
         >
           Gambar
         </button>
         <button
-          class="p-4 rounded-r border-2 border-blue-700"
+          class="p-4 rounded-r border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'video' ? 'bg-blue-700 text-white' : 'bg-white'"
           @click="handleInputType('video')"
         >
@@ -57,13 +58,16 @@ const handleInputType = (type) => {
     <div class="grid gap-8 px-4 py-8 rounded-xl bg-white shadow-lg">
       <div class="text-xl font-semibold">Hasil Deteksi :</div>
       <div class="flex">
-        <div class="text-xl font-semibold">Status :</div>
+        <div class="text-xl font-semibold me-2">Status :</div>
+        <div class="text-xl text-red-600" v-if="!isJudi">❌ Terindikasi Iklan Judi</div>
+        <div class="text-xl text-green-600" v-else>✔️ Tidak Terindikasi Iklan Judi</div>
       </div>
       <div class="flex">
-        <div class="text-xl font-semibold">Kepastian :</div>
+        <div class="text-xl font-semibold me-2">Kepastian :</div>
+        <div class="text-xl">94%</div>
       </div>
       <div class="flex">
-        <div class="text-xl font-semibold">Kata Kunci :</div>
+        <div class="text-xl font-semibold me-2">Kata Kunci :</div>
       </div>
     </div>
 
