@@ -8,6 +8,7 @@ const selectedInputType = ref('')
 const inputText = ref('')
 const result = ref(null)
 const imageFile = ref(null)
+const videoFile = ref(null)
 const imagePreview = ref(null)
 const isDetec = ref(false)
 
@@ -20,11 +21,16 @@ const handleImageUpload = (e) => {
   }
 }
 
+const handleVideoUpload = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  videoFile.value = file
+}
+
 const handleDetect = async () => {
   const toastLoading = toast.loading('Loading...')
   result.value = null
   isDetec.value = true
-  toastLoading
 
   if (selectedInputType.value === 'text') {
     if (!inputText.value.trim()) return
@@ -36,9 +42,6 @@ const handleDetect = async () => {
     })
 
     result.value = await res.json()
-    isDetec.value = false
-    toast.success('Deteksi Selesai')
-    toast.remove(toastLoading)
   } else if (selectedInputType.value === 'image') {
     if (!imageFile.value) return alert('Pilih gambar terlebih dahulu.')
 
@@ -51,10 +54,23 @@ const handleDetect = async () => {
     })
 
     result.value = await res.json()
-    isDetec.value = false
-    toast.remove(toastLoading)
-    toast.success('Deteksi Selesai')
+  } else if (selectedInputType.value === 'video') {
+    if (!videoFile.value) return alert('Pilih video terlebih dahulu.')
+
+    const formData = new FormData()
+    formData.append('video', videoFile.value)
+
+    const res = await fetch('/api/detect-video', {
+      method: 'POST',
+      body: formData,
+    })
+
+    result.value = await res.json()
   }
+
+  isDetec.value = false
+  toast.remove(toastLoading)
+  toast.success('Deteksi Selesai')
 }
 </script>
 
@@ -82,6 +98,7 @@ const handleDetect = async () => {
         <button
           class="p-4 rounded-r border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'video' ? 'bg-blue-700 text-white' : 'bg-white'"
+          @click="selectedInputType = 'video'"
         >
           Video
         </button>
@@ -101,6 +118,10 @@ const handleDetect = async () => {
         <div v-if="imagePreview">
           <img :src="imagePreview" class="max-w-md mt-4 rounded shadow" />
         </div>
+      </div>
+
+      <div v-if="selectedInputType === 'video'" class="flex flex-col gap-4">
+        <input type="file" accept="video/*" @change="handleVideoUpload" />
       </div>
 
       <div class="flex">
