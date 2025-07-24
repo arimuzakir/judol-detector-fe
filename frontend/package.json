@@ -12,8 +12,12 @@
   "dependencies": {
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
+<<<<<<< HEAD
     "vue-router": "^4.5.1",
     "vue3-toastify": "^0.2.8"
+=======
+    "vue-router": "^4.5.1"
+>>>>>>> ced46b1f93a5b50e33740fd558e6068556dac573
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",

@@ -6,6 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+<<<<<<< HEAD
   plugins: [vue(), vueDevTools()],
   resolve: {
     alias: {
@@ -15,6 +16,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:5000',
+=======
+  plugins: [
+    vue(),
+    vueDevTools(),
+  ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+>>>>>>> ced46b1f93a5b50e33740fd558e6068556dac573
     },
   },
 })
