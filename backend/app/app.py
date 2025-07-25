@@ -1,13 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tensorflow as tf
-import numpy as np
-import os
-import pickle
-import easyocr
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-import cv2
-import tempfile
+import cv2, tempfile, easyocr, pickle, os
+from cleansing import *
 
 app = Flask(__name__)
 CORS(app)
@@ -137,6 +133,6 @@ def detect_video():
     })
     
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
 
 

@@ -4,6 +4,7 @@ __pycache__/
 venv/
 instance/
 .env
+.venv/
 
 # === Node / Vue ===
 node_modules/

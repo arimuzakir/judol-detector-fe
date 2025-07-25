@@ -1,16 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 // State
-const selectedInputType = ref('')
+const selectedInputType = ref('text')
 const inputText = ref('')
 const result = ref(null)
 const imageFile = ref(null)
 const videoFile = ref(null)
 const imagePreview = ref(null)
 const isDetec = ref(false)
+const textInput = ref(null)
 
 // Methods
 const handleImageUpload = (e) => {
@@ -19,6 +20,18 @@ const handleImageUpload = (e) => {
     imageFile.value = file
     imagePreview.value = URL.createObjectURL(file)
   }
+}
+
+onMounted(() => {
+  if (selectedInputType.value === 'text') {
+    focusTextInput()
+  }
+})
+
+const focusTextInput = () => {
+  nextTick(() => {
+    textInput.value?.focus()
+  })
 }
 
 const handleVideoUpload = (e) => {
@@ -82,21 +95,21 @@ const handleDetect = async () => {
       <div class="text-xl font-semibold">Pilih Jenis Input</div>
       <div class="flex font-bold text-blue-700">
         <button
-          class="p-4 rounded-l border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
+          class="p-2 rounded-l border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'text' ? 'bg-blue-700 text-white' : 'bg-white'"
-          @click="selectedInputType = 'text'"
+          @click="() => { selectedInputType = 'text'; focusTextInput(); }"
         >
           Teks
         </button>
         <button
-          class="p-4 border-t-2 border-b-2 border-blue-700 hover:bg-blue-700 hover:text-white"
+          class="p-2 border-t-2 border-b-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'image' ? 'bg-blue-700 text-white' : 'bg-white'"
           @click="selectedInputType = 'image'"
         >
           Gambar
         </button>
         <button
-          class="p-4 rounded-r border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
+          class="p-2 rounded-r border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'video' ? 'bg-blue-700 text-white' : 'bg-white'"
           @click="selectedInputType = 'video'"
         >
@@ -106,6 +119,7 @@ const handleDetect = async () => {
 
       <div v-if="selectedInputType === 'text'" class="flex flex-col gap-4">
         <textarea
+          ref="textInput"
           v-model="inputText"
           rows="4"
           placeholder="Masukkan teks untuk deteksi"
@@ -126,19 +140,33 @@ const handleDetect = async () => {
 
       <div class="flex">
         <button
-          v-if="!isDetect"
+          :disabled="isDetec"
           @click="handleDetect"
-          class="font-bold text-white rounded bg-blue-700 p-4"
+          class="font-bold text-white rounded bg-blue-700 p-2 flex items-center gap-2 transition"
+          :class="isDetec ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-blue-800'"
         >
-          Deteksi Sekarang
-        </button>
-        <button
-          v-else
-          disabled
-          @click="handleDetect"
-          class="font-bold text-white rounded bg-blue-700 p-4"
-        >
-          Deteksi Sekarang
+          <svg
+            v-if="isDetec"
+            class="animate-spin h-5 w-5 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <span>{{ isDetec ? 'Sedang Memproses...' : 'Deteksi Sekarang' }}</span>
         </button>
       </div>
     </div>
@@ -149,12 +177,18 @@ const handleDetect = async () => {
         <div class="text-xl font-semibold me-2">Status :</div>
         <div
           class="text-xl"
-          :class="result.raw_confidence > 0.5 ? 'text-red-600' : 'text-green-600'"
+          :class="
+            result?.raw_confidence != null
+              ? (result.raw_confidence > 0.5 ? 'text-red-600' : 'text-green-600')
+              : 'text-yellow-500'
+          "
         >
           {{
-            result.raw_confidence > 0.5
-              ? '❌ Terindikasi Iklan Judi'
-              : '✔️ Tidak Terindikasi Iklan Judi'
+            result?.raw_confidence != null
+              ? (result.raw_confidence > 0.5
+                  ? '❌ Terindikasi Iklan Judi'
+                  : '✔️ Tidak Terindikasi Iklan Judi')
+              : '⚠️ Teks tidak ditemukan'
           }}
         </div>
       </div>
