@@ -193,7 +193,7 @@ const handleDetect = async () => {
         </div>
       </div>
       <div class="flex">
-        <div class="text-xl font-semibold me-2">Kepastian :</div>
+        <div class="text-xl font-semibold me-2">Persentase Kata Judi Online :</div>
         <div class="text-xl">{{ result.confidence }}</div>
       </div>
     </div>
