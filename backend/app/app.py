@@ -3,7 +3,6 @@ from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import cv2, tempfile, easyocr, pickle, os
-from cleansing import *
 
 app = Flask(__name__)
 CORS(app)
@@ -27,6 +26,10 @@ def preprocess_text(text):
     sequence = tokenizer.texts_to_sequences([text])
     padded = pad_sequences(sequence, maxlen=MAX_SEQUENCE_LENGTH, padding="post", truncating="post")
     return padded
+
+@app.route('/', methods=['GET'])
+def index():
+    return "Running";
 
 # ====== Endpoint untuk teks langsung ======
 @app.route('/api/detect-text', methods=['POST'])
