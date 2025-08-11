@@ -3,6 +3,9 @@ import { ref, nextTick, onMounted } from 'vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
+// API BASE URL
+const baseUrl = import.meta.env.VITE_API_BASE_URL
+
 // State
 const selectedInputType = ref('text')
 const inputText = ref('')
@@ -12,6 +15,8 @@ const videoFile = ref(null)
 const imagePreview = ref(null)
 const isDetec = ref(false)
 const textInput = ref(null)
+const detectionTime = ref(null)
+const fileInfo = ref(null)
 
 // Methods
 const handleImageUpload = (e) => {
@@ -43,47 +48,84 @@ const handleVideoUpload = (e) => {
 const handleDetect = async () => {
   const toastLoading = toast.loading('Loading...')
   result.value = null
+  detectionTime.value = null
+  fileInfo.value = null
   isDetec.value = true
 
-  if (selectedInputType.value === 'text') {
-    if (!inputText.value.trim()) return
+  const startTime = performance.now()
 
-    const res = await fetch('/api/detect-text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: inputText.value }),
-    })
+  try {
+    if (selectedInputType.value === 'text') {
+      if (!inputText.value.trim()) {
+        toast.error('Masukkan teks terlebih dahulu.')
+        return
+      }
+      console.log('base url : ', baseUrl)
+      console.log(import.meta.env.VITE_API_BASE_URL)
 
-    result.value = await res.json()
-  } else if (selectedInputType.value === 'image') {
-    if (!imageFile.value) return alert('Pilih gambar terlebih dahulu.')
+      const res = await fetch(`${baseUrl}/detect-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText.value }),
+      })
 
-    const formData = new FormData()
-    formData.append('image', imageFile.value)
+      if (!res.ok) throw new Error('Gagal deteksi teks')
+      result.value = await res.json()
+    } else if (selectedInputType.value === 'image') {
+      if (!imageFile.value) {
+        toast.error('Pilih gambar terlebih dahulu.')
+        return
+      }
 
-    const res = await fetch('/api/detect-image', {
-      method: 'POST',
-      body: formData,
-    })
+      const formData = new FormData()
+      formData.append('image', imageFile.value)
 
-    result.value = await res.json()
-  } else if (selectedInputType.value === 'video') {
-    if (!videoFile.value) return alert('Pilih video terlebih dahulu.')
+      const res = await fetch(`${baseUrl}/detect-image`, {
+        method: 'POST',
+        body: formData,
+      })
 
-    const formData = new FormData()
-    formData.append('video', videoFile.value)
+      if (!res.ok) throw new Error('Gagal deteksi gambar')
+      result.value = await res.json()
 
-    const res = await fetch('/api/detect-video', {
-      method: 'POST',
-      body: formData,
-    })
+      fileInfo.value = {
+        name: imageFile.value.name,
+        size: (imageFile.value.size / 1024 / 1024).toFixed(2) + ' MB',
+      }
+    } else if (selectedInputType.value === 'video') {
+      if (!videoFile.value) {
+        toast.error('Pilih video terlebih dahulu.')
+        return
+      }
 
-    result.value = await res.json()
+      const formData = new FormData()
+      formData.append('video', videoFile.value)
+
+      const res = await fetch(`${baseUrl}/detect-video`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error('Gagal deteksi video')
+      result.value = await res.json()
+
+      fileInfo.value = {
+        name: videoFile.value.name,
+        size: (videoFile.value.size / 1024 / 1024).toFixed(2) + ' MB',
+      }
+    }
+
+    const endTime = performance.now()
+    detectionTime.value = ((endTime - startTime) / 1000).toFixed(2) + ' detik'
+
+    toast.success('Deteksi Selesai')
+  } catch (error) {
+    console.error(error)
+    toast.error('Terjadi kesalahan saat mendeteksi.')
+  } finally {
+    isDetec.value = false
+    toast.remove(toastLoading)
   }
-
-  isDetec.value = false
-  toast.remove(toastLoading)
-  toast.success('Deteksi Selesai')
 }
 </script>
 
@@ -97,7 +139,12 @@ const handleDetect = async () => {
         <button
           class="p-2 rounded-l border-2 border-blue-700 hover:bg-blue-700 hover:text-white"
           :class="selectedInputType === 'text' ? 'bg-blue-700 text-white' : 'bg-white'"
-          @click="() => { selectedInputType = 'text'; focusTextInput(); }"
+          @click="
+            () => {
+              selectedInputType = 'text'
+              focusTextInput()
+            }
+          "
         >
           Teks
         </button>
@@ -160,11 +207,7 @@ const handleDetect = async () => {
               stroke="currentColor"
               stroke-width="4"
             ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
           <span>{{ isDetec ? 'Sedang Memproses...' : 'Deteksi Sekarang' }}</span>
         </button>
@@ -179,15 +222,17 @@ const handleDetect = async () => {
           class="text-xl"
           :class="
             result?.raw_confidence != null
-              ? (result.raw_confidence > 0.5 ? 'text-red-600' : 'text-green-600')
+              ? result.raw_confidence > 0.5
+                ? 'text-red-600'
+                : 'text-green-600'
               : 'text-yellow-500'
           "
         >
           {{
             result?.raw_confidence != null
-              ? (result.raw_confidence > 0.5
-                  ? '❌ Terindikasi Iklan Judi'
-                  : '✔️ Tidak Terindikasi Iklan Judi')
+              ? result.raw_confidence > 0.5
+                ? '❌ Terindikasi Iklan Judi'
+                : '✔️ Tidak Terindikasi Iklan Judi'
               : '⚠️ Teks tidak ditemukan'
           }}
         </div>
@@ -195,6 +240,14 @@ const handleDetect = async () => {
       <div class="flex">
         <div class="text-xl font-semibold me-2">Persentase Kata Judi Online :</div>
         <div class="text-xl">{{ result.confidence }}</div>
+      </div>
+      <div v-if="fileInfo" class="flex flex-col text-lg gap-2">
+        <div><strong>Nama File:</strong> {{ fileInfo.name }}</div>
+        <div><strong>Ukuran File:</strong> {{ fileInfo.size }}</div>
+      </div>
+
+      <div v-if="detectionTime" class="text-lg">
+        <strong>Waktu Proses:</strong> {{ detectionTime }}
       </div>
     </div>
   </div>
