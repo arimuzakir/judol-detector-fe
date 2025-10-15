@@ -1,0 +1,80 @@
+name: CI/CD Vue Frontend
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Vue.js Project
+        run: npm run build
+
+      - name: Login ke GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy ke Server (via SSH)
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "🚀 Mulai deploy Vue.js di server $(hostname)"
+
+            # === Pastikan Docker terinstall ===
+            if ! command -v docker &> /dev/null
+            then
+              echo "🐋 Docker belum terinstall, menginstall..."
+              curl -fsSL https://get.docker.com | sudo sh
+              sudo usermod -aG docker $USER
+            fi
+
+            # === Pastikan Docker Compose juga ada ===
+            if ! command -v docker-compose &> /dev/null
+            then
+              echo "🧩 Menginstall Docker Compose..."
+              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+                -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
+            # === Pull & jalankan container baru ===
+            docker pull ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
+            docker stop judol-detector-fe || true
+            docker rm judol-detector-fe || true
+            docker run -d \
+              --name judol-detector-fe \
+              -p 80:80 \
+              ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
+
+            echo "✅ Deployment Vue.js frontend selesai!"
