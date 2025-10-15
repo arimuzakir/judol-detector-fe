@@ -68,6 +68,8 @@ jobs:
               sudo chmod +x /usr/local/bin/docker-compose
             fi
 
+            sudo systemctl start docker || true
+
             # === Pull & jalankan container baru ===
             docker pull ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
             docker stop judol-detector-fe || true
