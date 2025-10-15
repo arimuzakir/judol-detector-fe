@@ -49,34 +49,23 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             echo "🚀 Mulai deploy Vue.js di server $(hostname)"
-
-            # === Pastikan Docker terinstall ===
-            if ! command -v docker &> /dev/null
-            then
-              echo "🐋 Docker belum terinstall, menginstall..."
-              curl -fsSL https://get.docker.com | sudo sh
-              sudo usermod -aG docker $USER
-            fi
-
-            # === Pastikan Docker Compose juga ada ===
-            if ! command -v docker-compose &> /dev/null
-            then
-              echo "🧩 Menginstall Docker Compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-            fi
-
             sudo systemctl start docker || true
 
-            # === Pull & jalankan container baru ===
-            docker pull ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
-            docker stop judol-detector-fe || true
-            docker rm judol-detector-fe || true
-            docker run -d \
+            echo "🔐 Login ke GHCR..."
+            echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "📦 Pull image..."
+            sudo docker pull ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
+
+            sudo docker stop judol-detector-fe || true
+            sudo docker rm judol-detector-fe || true
+            sudo docker run -d \
               --name judol-detector-fe \
               -p 80:80 \
               ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
 
             echo "✅ Deployment Vue.js frontend selesai!"
+            sudo docker ps -a
+
