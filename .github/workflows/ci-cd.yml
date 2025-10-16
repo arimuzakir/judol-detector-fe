@@ -62,8 +62,9 @@ jobs:
             set -e
             echo "🚀 Deploy frontend Vue di $(hostname)"
 
-            mkdir -p /var/www/judol-frontend
-            cd /var/www/judol-frontend
+            # Buat folder root (pakai sudo biar aman)
+            sudo mkdir -p /var/www/judol-frontend
+            sudo chown -R $USER:$USER /var/www/judol-frontend
 
             echo "🗜️ Extracting dist.tar.gz..."
             sudo tar -xzf /tmp/dist.tar.gz -C /var/www/judol-frontend --strip-components=1
