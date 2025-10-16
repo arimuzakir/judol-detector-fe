@@ -10,39 +10,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: 🧾 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Dependencies
+      - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: Build Vue.js Project
+      - name: 🏗️ Build Vue.js Project
         run: npm run build
 
-      - name: Login ke GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+      - name: 🗜️ Compress build output
+        run: |
+          tar -czf dist.tar.gz dist
 
-      - name: Build & Push Docker Image
-        uses: docker/build-push-action@v6
+      - name: 📤 Upload artifact (optional, debugging)
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
+          name: vue-dist
+          path: dist.tar.gz
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy ke Server (via SSH)
+      - name: 📥 Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-dist
+
+      - name: 🚀 Deploy ke Server (tanpa Docker)
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "dist.tar.gz"
+          target: "/tmp/"
+
+      - name: ⚙️ Ekstrak dan deploy di server
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -50,37 +60,18 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
+            echo "🚀 Deploy frontend Vue di $(hostname)"
 
-            if ! command -v docker &> /dev/null; then
-              echo "🐋 Install Docker..."
-              curl -fsSL https://get.docker.com | sudo sh
-              sudo usermod -aG docker $USER
-            fi
+            mkdir -p /var/www/judol-frontend
+            cd /var/www/judol-frontend
 
-            if ! command -v docker-compose &> /dev/null; then
-              echo "🧩 Install Docker Compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-            fi
+            echo "🗜️ Extracting dist.tar.gz..."
+            sudo tar -xzf /tmp/dist.tar.gz -C /var/www/judol-frontend --strip-components=1
 
-            echo "🚀 Mulai deploy Vue.js di server $(hostname)"
-            sudo systemctl start docker || true
+            echo "🧹 Cleanup..."
+            sudo rm -f /tmp/dist.tar.gz
 
-            echo "🔐 Login ke GHCR..."
-            echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "🔄 Reload Nginx..."
+            sudo nginx -t && sudo systemctl reload nginx
 
-            echo "📦 Pull image..."
-            sudo docker pull ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
-
-            sudo docker stop judol-detector-fe || true
-            sudo docker rm judol-detector-fe || true
-            sudo docker run -d \
-              --name judol-detector-fe \
-              --restart always \
-              -p 5000:5000 \
-              ghcr.io/${{ github.repository_owner }}/judol-detector-fe:latest
-
-            echo "✅ Deployment Vue.js frontend selesai!"
-            sudo docker ps -a
-
+            echo "✅ Frontend Vue.js berhasil di-deploy!"
