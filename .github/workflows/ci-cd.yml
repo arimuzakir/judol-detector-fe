@@ -53,6 +53,19 @@ jobs:
             echo "🚀 Mulai deploy Vue.js di server $(hostname)"
             sudo systemctl start docker || true
 
+            if ! command -v docker &> /dev/null; then
+              echo "🐋 Install Docker..."
+              curl -fsSL https://get.docker.com | sudo sh
+              sudo usermod -aG docker $USER
+            fi
+
+            if ! command -v docker-compose &> /dev/null; then
+              echo "🧩 Install Docker Compose..."
+              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+                -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
             echo "🔐 Login ke GHCR..."
             echo "${{ secrets.GHCR_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
